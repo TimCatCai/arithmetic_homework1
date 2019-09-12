@@ -5,7 +5,12 @@ import org.jgrapht.graph.SimpleGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
 
 import java.util.*;
-
+/**
+ * 主要思想为有向状态机，将每次往返作为一种状态，之后找出从初态到终态的路径，若存在这样的路径，
+ * 则说明该题可解
+ * @author TimCatCai 蔡浩明 3117004874
+ * Github 地址：https://github.com/TimCatCai/arithmetic_homework1
+ */
 public class RiverCrossing {
     public void crossing(){
         // 状态转换图

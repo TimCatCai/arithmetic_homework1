@@ -3,21 +3,28 @@ package timcat;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedWeightedGraph;
-import org.jgrapht.traverse.DepthFirstIterator;
 
 import java.util.*;
-import java.util.stream.IntStream;
 
+/**
+ * 基本的思路是将每次往返可能的状态全部列出，之后根据每次过桥为两个人，返回为一个人的思路
+ * 构建成一个有向带权图，最后使用最短路径算法，找出最短的路径，即为所要的结果。
+ * @author timcatcai 蔡浩明 3117004874
+ *  Github 地址：https://github.com/TimCatCai/arithmetic_homework1
+ */
 public class BridgeClossing {
 
+    // 过河的主要函数
     public void crossing() {
 //        SimpleWeightedGraph<BridgeStatus, DefaultEdge> statusChangedGraph = new SimpleWeightedGraph<>(DefaultEdge.class);
         SimpleDirectedWeightedGraph<BridgeStatus, DefaultEdge> statusChangedGraph = new SimpleDirectedWeightedGraph<>(DefaultEdge.class);
 
+        // 过河的人数
         int peopleNum = 4;
         int maxNumber = 1 << peopleNum;
         BridgeStatus[] statusArray = new BridgeStatus[1 << peopleNum];
 
+        // 将初始的状态设置为最短路径的起始结点
         BridgeStatus initialStatus = new BridgeStatus(new int[]{0, 0, 0, 0}, "a0 a1 a2 a3 | ");
 //        statusArray[0] = initialStatus;
         statusChangedGraph.addVertex(initialStatus);
@@ -68,6 +75,7 @@ public class BridgeClossing {
         ArrayList<Integer> statusIndexes;
         int beta = 0;
         int count = 1;
+        // 使用队列构建有向带权图，图的每一层代表一次过桥或返回
         while (!suitableVertex.isEmpty()) {
             currentVertex = suitableVertex.poll();
             if (isPassing) {
@@ -90,16 +98,35 @@ public class BridgeClossing {
             }
         }
 
+        int totalTime = 0;
         DijkstraShortestPath<BridgeStatus, DefaultEdge> dijkstraShortestPath
                 = new DijkstraShortestPath<>(statusChangedGraph);
         List<BridgeStatus> shortestPath = dijkstraShortestPath
                 .getPath(initialStatus, finalStatus).getVertexList();
-        for (BridgeStatus vertex : shortestPath) {
-            System.out.println(vertex.getMessage());
-            System.out.println();
+        BridgeStatus vertexBefore = shortestPath.get(0);
+        System.out.println(vertexBefore.getMessage());
+        BridgeStatus vertexAfter;
+        // 寻找最短路径，并计算最短的时间
+        for (int i = 1; i < shortestPath.size(); i++) {
+            vertexAfter = shortestPath.get(i);
+            System.out.println(vertexAfter.getMessage());
+            totalTime += countTime(vertexBefore, vertexAfter);
+            vertexBefore = vertexAfter;
         }
+
+        System.out.println("TotalTime: " + totalTime);
     }
 
+    /**
+     * 添加每一层的边并设置每条边的权重
+     * @param statusChangedGraph 代表历遍的顺序的图
+     * @param source 有向边的起始结点
+     * @param layer 每一层的结点记录
+     * @param statusIndexes 所要添加结点每个人的状态值构成的数值
+     * @param suitableVertex
+     * @param peopleNum 人数
+     * @return
+     */
     private int addAllEdgeAndWeight(SimpleDirectedWeightedGraph<BridgeStatus, DefaultEdge> statusChangedGraph,
                                      BridgeStatus source, Map<Integer, BridgeStatus> layer, ArrayList<Integer> statusIndexes, Queue<BridgeStatus> suitableVertex, int peopleNum){
         DefaultEdge ijEdge;
@@ -129,15 +156,13 @@ public class BridgeClossing {
         }
         return enqueueNum;
     }
-    private boolean isSuitablePassing(BridgeStatus a, BridgeStatus b) {
-        int total = 0;
-        for (int i = 0; i < a.getPeoples().length; i++) {
-            total += Math.abs(a.getPeoples()[i].getStatus() - b.getPeoples()[i].getStatus());
-        }
 
-        return total == 2;
-    }
-
+    /**
+     * 找出该节点所有过桥的情况
+     * @param a 起始结点
+     * @param allVertex 所有状态可能值
+     * @return
+     */
     private ArrayList<Integer> allSuitablePassing(BridgeStatus a, Set<BridgeStatus> allVertex) {
         int count;
         int bitDiff;
@@ -160,6 +185,11 @@ public class BridgeClossing {
         return result;
     }
 
+    /**
+     * 该节点返回的所有情况
+     * @param a
+     * @return
+     */
     private ArrayList<Integer> allSuitableBacking(BridgeStatus a) {
         ArrayList<Integer> result = new ArrayList<>();
         BridgeStatus tempStatus;
@@ -182,6 +212,12 @@ public class BridgeClossing {
         return result;
     }
 
+
+    /**
+     * 将每个结点的所有人的状态值转换成数值
+     * @param a
+     * @return
+     */
     private int changeArrayToInt(BridgeStatus a) {
         int temp;
         int result = 0;
@@ -193,6 +229,12 @@ public class BridgeClossing {
         return result;
     }
 
+    /**
+     * 计算邻接顶点所有的时间，即权重
+     * @param a
+     * @param b
+     * @return
+     */
     private int countTime(BridgeStatus a, BridgeStatus b) {
         int diff;
         int maxTimeIndex = 0;
@@ -207,6 +249,12 @@ public class BridgeClossing {
     }
 
 
+    /**
+     * 创建新的状态实例
+     * @param peopleNum
+     * @param code
+     * @return
+     */
     private BridgeStatus newBridgeStatusInstance(int peopleNum, int code){
         StringBuilder onePoint = new StringBuilder();
         StringBuilder anotherPoint = new StringBuilder();
