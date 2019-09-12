@@ -6,6 +6,7 @@ import org.jgrapht.graph.SimpleDirectedWeightedGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
 
 import java.util.*;
+import java.util.stream.IntStream;
 
 public class BridgeClossing {
 
@@ -18,14 +19,14 @@ public class BridgeClossing {
         BridgeStatus[] statusArray = new BridgeStatus[1 << peopleNum];
 
         BridgeStatus initialStatus = new BridgeStatus(new int[]{0, 0, 0, 0}, "a0 a1 a2 a3 | ");
-        statusArray[0] = initialStatus;
+//        statusArray[0] = initialStatus;
         statusChangedGraph.addVertex(initialStatus);
 
         BridgeStatus finalStatus = new BridgeStatus(new int[]{1, 1, 1, 1}, "| a0 a1 a2 a3");
         statusChangedGraph.addVertex(finalStatus);
         // !!!!!!!!!!! 注意减号的优先级高于移位运算符
 //        statusArray[(1 << peopleNum) - 1] = finalStatus;
-        statusArray[maxNumber - 1] = finalStatus;
+//        statusArray[maxNumber - 1] = finalStatus;
 
 
         StringBuilder onePoint = new StringBuilder();
@@ -58,7 +59,8 @@ public class BridgeClossing {
         }
 
 
-
+        Map<Integer, BridgeStatus> layer = new HashMap<>();
+        layer.put(0, initialStatus);
         boolean isPassing = true;
         Queue<BridgeStatus> suitableVertex = new LinkedList<>();
         suitableVertex.offer(initialStatus);
@@ -74,20 +76,20 @@ public class BridgeClossing {
                 statusIndexes = allSuitableBacking(currentVertex);
             }
 
-            beta += addAllEdgeAndWeight(statusChangedGraph, currentVertex, statusArray, statusIndexes, suitableVertex);
+            beta += addAllEdgeAndWeight(statusChangedGraph, currentVertex, layer, statusIndexes, suitableVertex, peopleNum);
             count --;
             if(count == 0){
                 isPassing = !isPassing;
                 count = beta;
                 beta = 0;
+                // 图构建结束
+                if(count == 0 && layer.containsKey(maxNumber - 1)){
+                    finalStatus = layer.get(maxNumber - 1);
+                }
+                layer.clear();
             }
         }
 
-        Iterator<BridgeStatus> iterator = new DepthFirstIterator<>(statusChangedGraph, initialStatus);
-        while (iterator.hasNext()) {
-            BridgeStatus a = iterator.next();
-            System.out.println(changeArrayToInt(a));
-        }
         DijkstraShortestPath<BridgeStatus, DefaultEdge> dijkstraShortestPath
                 = new DijkstraShortestPath<>(statusChangedGraph);
         List<BridgeStatus> shortestPath = dijkstraShortestPath
@@ -99,18 +101,29 @@ public class BridgeClossing {
     }
 
     private int addAllEdgeAndWeight(SimpleDirectedWeightedGraph<BridgeStatus, DefaultEdge> statusChangedGraph,
-                                     BridgeStatus source, BridgeStatus [] statusArray, ArrayList<Integer> statusIndexes, Queue<BridgeStatus> suitableVertex){
+                                     BridgeStatus source, Map<Integer, BridgeStatus> layer, ArrayList<Integer> statusIndexes, Queue<BridgeStatus> suitableVertex, int peopleNum){
         DefaultEdge ijEdge;
         int edgeWeight;
         int enqueueNum = 0;
+        BridgeStatus currentStatus;
+        int maxNum = (1 << peopleNum) - 1;
         for (int statusIndex : statusIndexes){
-            ijEdge = statusChangedGraph.addEdge(source, statusArray[statusIndex]);
-            if (ijEdge != null) {
-                if(statusArray[statusIndex] != statusArray[statusArray.length - 1]){
-                    suitableVertex.offer(statusArray[statusIndex]);
+            if(layer.containsKey(statusIndex)){
+                currentStatus = layer.get(statusIndex);
+            }else{
+                currentStatus = newBridgeStatusInstance(peopleNum, statusIndex);
+                layer.put(statusIndex, currentStatus);
+                statusChangedGraph.addVertex(currentStatus);
+                if(statusIndex != maxNum){
+                    suitableVertex.offer(currentStatus);
                     enqueueNum ++;
                 }
-                edgeWeight = countTime(source, statusArray[statusIndex]);
+            }
+
+            ijEdge = statusChangedGraph.addEdge(source, currentStatus);
+            if (ijEdge != null) {
+
+                edgeWeight = countTime(source, currentStatus);
                 statusChangedGraph.setEdgeWeight(ijEdge, edgeWeight);
             }
         }
@@ -191,5 +204,29 @@ public class BridgeClossing {
         }
 
         return a.getPeoples()[maxTimeIndex].getTime();
+    }
+
+
+    private BridgeStatus newBridgeStatusInstance(int peopleNum, int code){
+        StringBuilder onePoint = new StringBuilder();
+        StringBuilder anotherPoint = new StringBuilder();
+        StringBuilder point;
+        String message;
+        int[] status = new int[peopleNum];
+        for (int j = 0; j < peopleNum; j++) {
+            status[j] = (code >> peopleNum - j - 1) & 1;
+            if (status[j] == 0) {
+                point = onePoint;
+            } else {
+                point = anotherPoint;
+            }
+            point.append("a");
+            point.append(j);
+            point.append(" ");
+        }
+        onePoint.append(" | ");
+        onePoint.append(anotherPoint);
+        message = onePoint.toString();
+        return new BridgeStatus(status, message);
     }
 }
